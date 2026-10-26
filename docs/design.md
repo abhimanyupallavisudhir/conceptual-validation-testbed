@@ -82,3 +82,10 @@ the design (a family whose questions all resolve void teaches nothing), then add
   measurement, recorded as such.
 - **Retired models.** Conditions on gpt-4.1-nano (retired in October 2026) cannot be re-measured. Templates
   written since then include an open-weight subject.
+
+## Status of the fine-tuning templates
+
+The pipeline (dataset construction, upload, job creation) was exercised on one `finetuning/persona_decision_theory`
+condition on 2026-10-26: OpenAI accepted job `ftjob-Ujl34nFre8jSbiSMvO9Wuy17` (gpt-4o-mini), which was still queued
+after 90 minutes. `cvt label finetuning/persona_decision_theory --max-conditions 1` on the same machine resumes that
+job (the job ledger is in the LLM cache directory); elsewhere it submits a new one (about $1).
