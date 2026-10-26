@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "conceptual-validation-testbed"
+version = "0.1.0"
+description = "Questions that must be argued about, with hidden ground truth from computation, proof or experiment - for validating methods of conceptual reasoning and oversight."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [{ name = "Abhimanyu Pallavi Sudhir" }]
+dependencies = ["numpy>=1.26", "pydantic>=2.6", "pyyaml>=6"]
+
+[project.optional-dependencies]
+sat = ["python-sat>=1.8.dev0"]
+rl = ["numba>=0.59"]
+dtbench = ["json5>=0.9"]
+llm = ["inspect-ai>=0.3.100", "openai>=1.40", "anthropic>=0.40"]
+ml = ["scikit-learn>=1.4"]
+all = ["python-sat>=1.8.dev0", "numba>=0.59", "json5>=0.9", "inspect-ai>=0.3.100", "openai>=1.40",
+       "anthropic>=0.40", "scikit-learn>=1.4"]
+dev = ["pytest>=8", "python-sat>=1.8.dev0", "numba>=0.59", "json5>=0.9", "scikit-learn>=1.4"]
+
+[project.scripts]
+cvt = "cvtestbed.cli:main"
+
+[project.urls]
+Repository = "https://github.com/abhimanyupallavisudhir/conceptual-validation-testbed"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cvtestbed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["network: needs internet access", "api: calls model APIs (costs money)"]
