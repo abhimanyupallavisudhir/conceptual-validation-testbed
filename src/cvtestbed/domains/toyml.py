@@ -11,7 +11,8 @@ Each is a minimal, exactly specified version of a phenomenon alignment research 
 * ``toyml/weak_to_strong`` (Burns et al. 2023): a strong student trained on a weak supervisor's labels - how much
   of the gap to the student's own ceiling does it recover (PGR)?
 * ``toyml/rm_overoptimization`` (Gao et al. 2022): best-of-n against a proxy reward model fitted to noisy labels -
-  does the gold reward keep rising from n = 16 to n = 256, or does it fall?
+  does the gold reward keep rising from n = 16 to n = 256, or does it fall? (In the first labelled grid it rose in
+  every condition: this toy shows no overoptimization at these n, and its questions turn on how much it rose.)
 
 All are pairwise templates over factor grids, measured with fixed seeds (several per condition).
 """

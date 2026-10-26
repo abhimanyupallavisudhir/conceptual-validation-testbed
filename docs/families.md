@@ -265,7 +265,7 @@ Each question compares two conditions of a toy experiment in which outputs are s
 - **Protocol.** Outputs are vectors x of 10 features drawn from a normal distribution with mean 0 and the stated scale. The gold reward is w.x - 0.5 x1^2 for a fixed random w (so pushing the first feature far in either direction eventually hurts). A proxy reward model is fitted to the stated number of samples with Gaussian label noise. Best-of-n draws n outputs and keeps the one the proxy scores highest. Averaged over 6 seeds and 200 selections each.
 - **Metric.** the gold reward of best-of-256 minus that of best-of-16.
 - **Design.** All combinations of proxy: linear, mlp; labels: 50, 2000; noise: 0.5, 3.0; base_scale: 0.5, 2.0 (16 conditions). Questions compare two conditions differing in one factor; void if the metrics differ by less than 0.2.
-- **Questions.** 0 labelled, 0 void, 32 unlabelled (version 1).
+- **Questions.** 19 labelled, 13 void, 0 unlabelled (version 1).
 
 ## Sandbagging
 
@@ -344,4 +344,4 @@ Each question compares two conditions of a toy weak-to-strong experiment: a weak
 - **Protocol.** Inputs are 10 independent standard normal features; the true label is 1 iff w.x > 0 for a fixed random w (a linear concept). A weak supervisor - a decision tree of limited depth - is fitted to a small gold-labelled set and labels 4,000 further inputs; a student is trained on those weak labels alone. Accuracy is measured on 1,000 test inputs and averaged over 5 seeds.
 - **Metric.** the student's test accuracy minus the supervisor's (accuracy gained by weak-to-strong training).
 - **Design.** All combinations of weak_depth: 2, 6; weak_n: 100, 1000; student: logreg, mlp, gbm (12 conditions). Questions compare two conditions differing in one factor; void if the metrics differ by less than 0.02.
-- **Questions.** 0 labelled, 0 void, 24 unlabelled (version 1).
+- **Questions.** 13 labelled, 11 void, 0 unlabelled (version 1).
