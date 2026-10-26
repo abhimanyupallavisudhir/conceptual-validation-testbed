@@ -96,7 +96,8 @@ class Meter:
 class LLM:
     def __init__(self, *, concurrency: int = 32, simulate: bool = False, cache: Path | None = None,
                  assumed_output: int = 300):
-        self.sem = asyncio.Semaphore(concurrency)
+        self.concurrency = concurrency
+        self._sems: dict[int, asyncio.Semaphore] = {}  # one per event loop (a client may outlive asyncio.run)
         self.simulate, self.assumed_output = simulate, assumed_output
         self.cache = _Cache((cache or cache_dir()) / "llm.sqlite")
         self._models: dict[str, Any] = {}
@@ -136,7 +137,9 @@ class LLM:
         msgs = [conv[m["role"]](content=m["content"]) for m in messages]
         cfg = GenerateConfig(max_tokens=max_tokens, temperature=temperature,
                              reasoning_effort="low" if reasoning else None)
-        async with self.sem:
+        loop = id(asyncio.get_running_loop())
+        sem = self._sems.setdefault(loop, asyncio.Semaphore(self.concurrency))
+        async with sem:
             for attempt in range(4):
                 try:
                     out = await self._model(model).generate(msgs, config=cfg)

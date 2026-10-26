@@ -1,0 +1,50 @@
+# Label experiment questions at the click of a button: Actions > label > Run workflow.
+# Runs `cvt label` on the chosen families within a budget and opens a pull request with the new measurements.
+# Needs repository secrets OPENAI_API_KEY, ANTHROPIC_API_KEY and OPENROUTER_API_KEY (only those the families use).
+name: label
+on:
+  workflow_dispatch:
+    inputs:
+      families:
+        description: "Families or domains, space-separated (e.g. 'cot scheming/sandbagging')"
+        required: true
+      budget:
+        description: "Dollars per family"
+        default: "2"
+      max_conditions:
+        description: "At most this many conditions per family (blank: no limit)"
+        default: ""
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/cvtestbed
+          key: cvt-llm-${{ github.run_id }}
+          restore-keys: cvt-llm-
+      - run: pip install -e ".[all]"
+      - name: Label
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          extra=""
+          if [ -n "${{ inputs.max_conditions }}" ]; then extra="--max-conditions ${{ inputs.max_conditions }}"; fi
+          cvt label ${{ inputs.families }} --budget ${{ inputs.budget }} $extra | tee label.log
+      - uses: peter-evans/create-pull-request@v6
+        with:
+          branch: label/${{ github.run_id }}
+          commit-message: "Label ${{ inputs.families }} (budget ${{ inputs.budget }} per family)"
+          title: "Label ${{ inputs.families }}"
+          body-path: label.log
+          add-paths: src/cvtestbed/data/results/*.jsonl

@@ -30,6 +30,13 @@ SOURCES = {
     "multiagent": ("cvtestbed.domains.multiagent", "MultiAgent"),
     "sycophancy": ("cvtestbed.domains.sycophancy", "Sycophancy"),
     "personas": ("cvtestbed.domains.personas", "Personas"),
+    "toyml": ("cvtestbed.domains.toyml", "ToyML"),
+    "oversight": ("cvtestbed.domains.oversight", "Oversight"),
+    "cot": ("cvtestbed.domains.cot", "CoT"),
+    "scheming": ("cvtestbed.domains.scheming", "Scheming"),
+    "control": ("cvtestbed.domains.control", "Control"),
+    "corrigibility": ("cvtestbed.domains.corrigibility", "Corrigibility"),
+    "finetuning": ("cvtestbed.domains.finetuning", "FineTuning"),
 }
 
 # names used before the testbed became its own package (so-arena's ``testbed`` domain, lvpm results)

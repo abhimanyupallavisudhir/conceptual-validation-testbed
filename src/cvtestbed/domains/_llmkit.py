@@ -12,12 +12,19 @@ BATTERIES = Path(__file__).resolve().parents[1] / "data" / "batteries"
 
 MODELS = {
     "openai/gpt-4.1-nano": "GPT-4.1 nano (OpenAI)",
+    "openai/gpt-4o-mini": "GPT-4o mini (OpenAI)",
     "openai/gpt-4.1-mini": "GPT-4.1 mini (OpenAI)",
     "openrouter/meta-llama/llama-3.1-8b-instruct": "Llama 3.1 8B Instruct (Meta)",
     "anthropic/claude-haiku-4-5": "Claude Haiku 4.5 (Anthropic)",
 }
+# the subjects of the first (Oct 2026) experiments; gpt-4.1-nano was retired by OpenAI the following week, so
+# these grids are frozen as measured
 CHEAP_MODELS = ["openai/gpt-4.1-nano", "openai/gpt-4.1-mini", "openrouter/meta-llama/llama-3.1-8b-instruct",
                 "anthropic/claude-haiku-4-5"]
+# subjects of later templates: inexpensive, non-reasoning, three providers, one open-weight model (re-runnable for
+# as long as anyone serves the weights)
+SUBJECTS = ["openai/gpt-4o-mini", "openai/gpt-4.1-mini", "openrouter/meta-llama/llama-3.1-8b-instruct",
+            "anthropic/claude-haiku-4-5"]
 
 # "Answer: A", "**Answer:** (B)", "answer: b", "Answer - A": the last one counts
 ANSWER_RE = re.compile(r"answer\W{0,6}\(?\**([AB])\b", re.I)

@@ -41,6 +41,16 @@ from cvtestbed.schema import Family, Question, split_of
 RESULTS = Path(__file__).resolve().parent / "data" / "results"
 
 
+def _one_thread() -> None:
+    """Worker initializer: one BLAS/OpenMP thread per process, so a pool of workers does not oversubscribe."""
+    try:
+        from threadpoolctl import threadpool_limits
+
+        threadpool_limits(1)
+    except ImportError:  # pragma: no cover
+        pass
+
+
 def cond_id(c: dict[str, Any]) -> str:
     return hashlib.sha256(json.dumps(c, sort_keys=True, default=str).encode()).hexdigest()[:12]
 
@@ -62,6 +72,7 @@ class Template:
     outcome: Callable[[dict[str, Any]], tuple[str, str, str]] | None = None  # c -> (question, yes, no)
     resolve: Callable[[dict[str, Any]], bool | None] | None = None  # result -> yes / no / void
     void_rule: str = ""  # stated in outcome questions
+    cost_estimate: Callable[[dict[str, Any]], float] | None = None  # dollars per condition, if not by dry run
     notes: str = ""
 
     @property
@@ -199,6 +210,8 @@ class Template:
         """Dry run with a simulated LLM: the dollar cost of measuring ``conditions`` (CPU templates: 0)."""
         if self.cpu:
             return 0.0
+        if self.cost_estimate is not None:
+            return float(sum(self.cost_estimate(c) for c in conditions))
         llm = LLM(simulate=True)
         costs = []
         for c in conditions[: min(len(conditions), 3)]:
@@ -216,7 +229,7 @@ class Template:
         llm = llm or LLM()
         todo = self.pending(seed)[:max_conditions]
         spent, done = 0.0, 0
-        pool = ProcessPoolExecutor(workers) if self.cpu else None
+        pool = ProcessPoolExecutor(workers, initializer=_one_thread) if self.cpu else None
         try:
             while todo:
                 chunk, todo = todo[:batch], todo[batch:]

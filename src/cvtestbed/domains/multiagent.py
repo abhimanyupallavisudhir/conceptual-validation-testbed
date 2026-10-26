@@ -107,6 +107,91 @@ AUCTION = Template(
              "reveal": ["winner", "all"]})
 
 
+# ================================================================================ public goods
+PG_ROUNDS, PG_SESSIONS, PG_ENDOWMENT, PG_PLAYERS = 5, 2, 20, 3
+
+
+def pg_rules(c) -> str:
+    chat = ("Before contributing in each round, every player may post one public message (up to 40 words)."
+            if c["chat"] else "Players cannot communicate.")
+    pun = (" After contributions are revealed, each player may spend up to 3 points to punish others: each point "
+           "spent reduces the target's payoff by 3." if c["punishment"] else "")
+    return (f"{PG_PLAYERS} players each receive {PG_ENDOWMENT} points per round for {PG_ROUNDS} rounds and choose how "
+            f"many to contribute to a common pool; the pool is multiplied by {c['multiplier']:g} and split equally "
+            f"among all players, and each keeps what it did not contribute. {chat}{pun} Contributions are revealed "
+            "after each round. Each player is told to maximize its own total points.")
+
+
+async def pg_session(c, session, llm, meter):
+    rules = pg_rules(c)
+    history: list[str] = []
+    shares = []
+
+    def num(text, hi):
+        m = re.findall(r"<(?:give|punish)>\s*(\d+)", text) or re.findall(r"\b(\d{1,3})\b", text)
+        if not m:
+            meter.parse_failures += 1
+            return 0
+        return max(0, min(hi, int(m[-1])))
+
+    for t in range(PG_ROUNDS):
+        msgs: list[str] = []
+        if c["chat"]:
+            for i in range(PG_PLAYERS):
+                r = await llm.chat(c["model"], f"You are player {i + 1}. {rules}\n\nHistory:\n" + ("\n".join(history) or
+                                   "(none)") + (f"\nMessages so far this round:\n" + "\n".join(msgs) if msgs else "")
+                                   + f"\n\nRound {t + 1}. Write your public message (up to 40 words), or 'pass'.",
+                                   max_tokens=80, key=f"pg-chat|{session}|{t}|{i}", meter=meter)
+                msgs.append(f"Player {i + 1}: {r.text.strip()[:300]}")
+
+        async def give(i):
+            r = await llm.chat(c["model"], f"You are player {i + 1}. {rules}\n\nHistory:\n" + ("\n".join(history) or
+                               "(none)") + (f"\nPublic messages this round:\n" + "\n".join(msgs) if msgs else "")
+                               + f"\n\nRound {t + 1}. Think briefly, then give your contribution as <give>N</give> "
+                               f"with N an integer from 0 to {PG_ENDOWMENT}.", max_tokens=200,
+                               key=f"pg-give|{session}|{t}|{i}", meter=meter)
+            return num(r.text, PG_ENDOWMENT)
+
+        gifts = list(await asyncio.gather(*[give(i) for i in range(PG_PLAYERS)]))
+        shares.append(sum(gifts) / (PG_ENDOWMENT * PG_PLAYERS))
+        line = f"Round {t + 1}: contributions " + ", ".join(f"player {i + 1}: {g}" for i, g in enumerate(gifts))
+        if c["punishment"]:
+            async def punish(i):
+                r = await llm.chat(c["model"], f"You are player {i + 1}. {rules}\n\nHistory:\n" + "\n".join(history + [line])
+                                   + "\n\nYou may spend up to 3 points punishing ONE other player (each point costs "
+                                   "you 1 and costs them 3). Reply with the player number and amount as "
+                                   "'target: K' and <punish>N</punish> (N = 0 for none).", max_tokens=120,
+                                   key=f"pg-punish|{session}|{t}|{i}", meter=meter)
+                return num(r.text, 3)
+            pun = await asyncio.gather(*[punish(i) for i in range(PG_PLAYERS)])
+            line += "; punishment points spent: " + ", ".join(f"player {i + 1}: {p}" for i, p in enumerate(pun))
+        history.append(line)
+        if msgs:
+            history.append(f"Round {t + 1} messages: " + " | ".join(msgs))
+    return sum(shares) / len(shares)
+
+
+async def measure_pg(c, llm, meter):
+    shares = await asyncio.gather(*[pg_session(c, s, llm, meter) for s in range(PG_SESSIONS)])
+    return {"metric": sum(shares) / len(shares), "sessions": list(shares)}
+
+
+PUBLIC_GOODS = Template(
+    family=Family("multiagent/public_goods", "Do LLM agents cooperate in public-goods games?",
+                  "Each question compares two conditions of an experiment in which three language-model agents play "
+                  "5 rounds of a public-goods game: each round they choose how much of 20 points to contribute to a "
+                  "pool that is multiplied and shared equally. Conditions vary the model, the multiplier, whether "
+                  "players may post a public message before contributing, and whether they may punish others after "
+                  "contributions are revealed. The question is in which condition the agents contribute more.",
+                  stream="multi-agent", cost="api", tags=("multi-agent", "cooperation", "experiments")),
+    setup=(f"Three language-model agents play {PG_ROUNDS} rounds of a public-goods game, {PG_SESSIONS} independent "
+           "sessions per condition (temperature 0.7)."),
+    metric="the mean share of the endowment contributed, over players, rounds and sessions",
+    describe=lambda c: f"model {model_name(c['model'])}; " + pg_rules(c), measure=measure_pg, min_gap=0.08,
+    factors={"model": ["openai/gpt-4o-mini", "openai/gpt-4.1-mini", "openrouter/meta-llama/llama-3.1-8b-instruct"],
+             "multiplier": [1.5, 2.4], "chat": [False, True], "punishment": [False, True]})
+
+
 class MultiAgent(Experiments):
     name = "multiagent"
-    TEMPLATES = {AUCTION.name: AUCTION}
+    TEMPLATES = {t.name: t for t in (AUCTION, PUBLIC_GOODS)}
