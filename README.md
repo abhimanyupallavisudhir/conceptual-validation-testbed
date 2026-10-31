@@ -45,6 +45,7 @@ measurements.
 | | `dtbench/capabilities` | expert answers (Oesterheld et al. 2024) | 340 |
 | social choice | `socialchoice/{rankings, winners}` | SAT over all voting rules | generated: unlimited |
 | heuristic mathematics | `numbers/{prime_race, counts, collatz}` | computation | generated: unlimited |
+| planted latent structure | `planted/world_{0..7}` | exact Bayes probabilities from a fictional mineralogy with hidden kinds (for checking that a method recovers a *known* true theory) | generated: unlimited |
 | reward hacking | `rewardhacking/gridworld_{sensor, fake_goal, watched_sensor}` | 6 Q-learning runs per question | 600 (+1,200 planned) |
 | | `toyml/rm_overoptimization` | best-of-n against a fitted proxy | grid |
 | goal misgeneralization | `toyml/goal_misgeneralization` | linear Q-learning, 8 seeds | grid |

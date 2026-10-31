@@ -37,6 +37,7 @@ SOURCES = {
     "control": ("cvtestbed.domains.control", "Control"),
     "corrigibility": ("cvtestbed.domains.corrigibility", "Corrigibility"),
     "finetuning": ("cvtestbed.domains.finetuning", "FineTuning"),
+    "planted": ("cvtestbed.domains.planted", "Planted"),
 }
 
 # names used before the testbed became its own package (so-arena's ``testbed`` domain, lvpm results)
