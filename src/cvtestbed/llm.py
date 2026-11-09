@@ -30,8 +30,16 @@ import yaml
 REASONING_PREFIXES = ("openai/gpt-5", "openai/o3", "openai/o4", "openai/o1")
 
 
+def split_effort(model: str) -> tuple[str, str | None]:
+    """``"openai/gpt-5-mini@medium"`` -> ``("openai/gpt-5-mini", "medium")``: a model name may carry its reasoning
+    effort. Reasoning models without one run at ``low``."""
+    base, _, effort = model.partition("@")
+    return base, effort or None
+
+
 def is_reasoning(model: str) -> bool:
-    return model.startswith(REASONING_PREFIXES)
+    base, effort = split_effort(model)
+    return base.startswith(REASONING_PREFIXES) and effort != "none"
 
 
 @lru_cache(maxsize=1)
@@ -41,6 +49,7 @@ def prices() -> dict[str, tuple[float, float]]:
 
 
 def price(model: str, tokens_in: int, tokens_out: int) -> float:
+    model = split_effort(model)[0]
     pin, pout = prices().get(model, (2.0, 8.0))  # unknown model: assume a mid-priced one
     return (tokens_in * pin + tokens_out * pout) / 1e6
 
@@ -106,7 +115,7 @@ class LLM:
         if name not in self._models:
             from inspect_ai.model import get_model
 
-            self._models[name] = get_model(name)
+            self._models[name] = get_model(split_effort(name)[0])
         return self._models[name]
 
     async def chat(self, model: str, messages: list[dict[str, str]] | str, *, max_tokens: int = 1024,
@@ -135,8 +144,10 @@ class LLM:
 
         conv = {"system": ChatMessageSystem, "user": ChatMessageUser, "assistant": ChatMessageAssistant}
         msgs = [conv[m["role"]](content=m["content"]) for m in messages]
-        cfg = GenerateConfig(max_tokens=max_tokens, temperature=temperature,
-                             reasoning_effort="low" if reasoning else None)
+        base, effort = split_effort(model)
+        if base.startswith(REASONING_PREFIXES):
+            effort, temperature = effort or "low", None
+        cfg = GenerateConfig(max_tokens=max_tokens, temperature=temperature, reasoning_effort=effort)
         loop = id(asyncio.get_running_loop())
         sem = self._sems.setdefault(loop, asyncio.Semaphore(self.concurrency))
         async with sem:
