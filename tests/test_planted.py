@@ -27,3 +27,38 @@ def test_questions_carry_exact_probabilities():
     for q in qs:
         assert 0 < q.data["bayes_p"] < 1
         assert q.options[q.answer].startswith("Yes") == q.data["passed"]
+
+
+def test_claims_have_exact_truth():
+    for k in range(16):
+        cs = P.claims(k)
+        assert {c["kind"] for c in cs} >= {"colour", "link", "facets"}
+        for c in cs:
+            assert c["margin"] > 0 and c["sides"][0] != c["sides"][1]
+    # a colour claim's true side agrees with simulation
+    c = next(x for x in P.claims(2) if x["kind"] == "colour")
+    w, s = P.world(2), c["subject"]
+    rng = random.Random(1)
+    hits = tot = 0
+    while tot < 4000:
+        x = P.sample_crystal(w, rng)
+        if x["colour"] == s["colour"]:
+            tot += 1
+            hits += x["results"][s["test"]]
+    assert (hits / tot > 0.5) == (" not " not in c["sides"][0])
+
+
+def test_claim_questions_target_the_claim():
+    c = next(x for x in P.claims(5) if x["kind"] == "colour")
+    qs = P.claim_questions(c, 20)
+    assert len(qs) == 20 and len({q.id for q in qs}) == 20
+    on = qs[:10]
+    assert all(q.params["colour"] == c["subject"]["colour"] and q.params["test"] == c["subject"]["test"] for q in on)
+    assert all(0 < q.data["bayes_p"] < 1 for q in qs)
+
+
+def test_shifted_claim_questions():
+    c = next(x for x in P.claims(4) if x["kind"] == "facets")
+    qs = P.claim_questions(c, 12, shifted=True)
+    assert all(q.params["mine"] == P.SHIFTED_MINE and q.params["facets"] >= 10 for q in qs)
+    assert all(q.params["colour"] == c["subject"]["colour"] for q in qs[:6])
